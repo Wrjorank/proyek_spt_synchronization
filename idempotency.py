@@ -7,48 +7,40 @@ Contoh: User klik tombol beli tiket 2x karena jaringan lambat.
 """
 
 import threading
-import uuid
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 
 class IdempotencyStore:
-    """
-    Menyimpan hasil request berdasarkan idempotency_key.
-    Jika key yang sama dikirim ulang, kembalikan hasil yang sudah ada
-    tanpa memproses ulang.
-    """
+    """Penyimpanan hasil request berdasarkan idempotency key."""
 
-    def __init__(self):
-        self._store: dict = {}       # key -> result
+    def __init__(self) -> None:
+        self._store: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.Lock()
 
     def is_processed(self, key: str) -> bool:
-        """Cek apakah request dengan key ini sudah pernah diproses."""
+        """Periksa apakah key request sudah pernah diproses."""
         with self._lock:
             return key in self._store
 
-    def get_result(self, key: str) -> Optional[dict]:
-        """Ambil hasil dari request yang sudah diproses."""
+    def get_result(self, key: str) -> Optional[Dict[str, Any]]:
+        """Ambil hasil request yang sudah diproses."""
         with self._lock:
             return self._store.get(key)
 
-    def save_result(self, key: str, result: dict):
-        """Simpan hasil request."""
+    def save_result(self, key: str, result: Dict[str, Any]) -> None:
+        """Simpan hasil request untuk idempotency."""
         with self._lock:
             self._store[key] = {
                 "result": result,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
-    def clear(self):
+    def clear(self) -> None:
         with self._lock:
             self._store.clear()
 
 
 def generate_idempotency_key(user_id: str, ticket_id: str) -> str:
-    """
-    Generate unique key berdasarkan user + tiket.
-    Jika user yang sama mencoba beli tiket yang sama → key identik.
-    """
+    """Generate idempotency key yang konsisten untuk user dan tiket."""
     return f"{user_id}:{ticket_id}"
